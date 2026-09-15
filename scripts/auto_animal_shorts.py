@@ -61,6 +61,17 @@ def apply_env_overrides_to_config():
     provider_set = False
     explicit_provider = os.getenv("LLM_PROVIDER")
 
+    if os.getenv("GROQ_API_KEY"):
+        config.app["groq_api_key"] = os.getenv("GROQ_API_KEY").strip()
+        config.app["groq_model_name"] = (
+            os.getenv("LLM_MODEL_NAME")
+            or os.getenv("GROQ_MODEL_NAME")
+            or "qwen/qwen3.8-27b"
+        ).strip()
+        if not explicit_provider and not provider_set:
+            config.app["llm_provider"] = "groq"
+            provider_set = True
+
     if os.getenv("GEMINI_API_KEY"):
         config.app["gemini_api_key"] = os.getenv("GEMINI_API_KEY").strip()
         if not explicit_provider and not provider_set:
@@ -88,8 +99,13 @@ def apply_env_overrides_to_config():
     if explicit_provider:
         config.app["llm_provider"] = explicit_provider.strip().lower()
 
-    active_provider = config.app.get("llm_provider", "moonshot")
-    logger.info(f"Active LLM Provider: {active_provider}")
+    active_provider = config.app.get("llm_provider", "groq")
+    model_name_env = os.getenv("LLM_MODEL_NAME")
+    if model_name_env:
+        config.app[f"{active_provider}_model_name"] = model_name_env.strip()
+
+    active_model = config.app.get(f"{active_provider}_model_name", "")
+    logger.info(f"Active LLM Provider: {active_provider} (Model: {active_model})")
 
 
 

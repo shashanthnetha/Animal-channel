@@ -138,6 +138,8 @@ def run_animal_shorts_pipeline(
     custom_topic: Optional[str] = None,
     pillar_id: Optional[str] = None,
     voice_name: str = DEFAULT_VOICE,
+    voice_rate: float = 0.8,
+    bgm_volume: float = 0.08,
     privacy_status: str = "public",
     video_source: str = "pexels",
     dry_run: bool = False,
@@ -147,6 +149,7 @@ def run_animal_shorts_pipeline(
     Executes the full automated pipeline.
     """
     logger.info("🌿 Starting Animal & Nature Autonomous Shorts Engine...")
+    logger.info(f"Audio Settings: Voice Rate = {voice_rate}x, BGM Volume = {bgm_volume}")
     apply_env_overrides_to_config()
 
     # Step 1: Topic selection
@@ -235,9 +238,9 @@ def run_animal_shorts_pipeline(
         video_language="en",
         voice_name=voice_name,
         voice_volume=1.0,
-        voice_rate=1.08,
+        voice_rate=voice_rate,
         bgm_type="random",
-        bgm_volume=0.15,
+        bgm_volume=bgm_volume,
         subtitle_enabled=True,
         subtitle_position="bottom",
         custom_position=75.0,
@@ -308,6 +311,8 @@ def main():
     parser.add_argument("--voice", default=DEFAULT_VOICE, help=f"TTS Voice name (default: {DEFAULT_VOICE})")
     parser.add_argument("--privacy", default="public", choices=["public", "unlisted", "private"], help="YouTube privacy status")
     parser.add_argument("--source", default="pexels", help="Video source (pexels, pixabay, coverr, local)")
+    parser.add_argument("--voice-rate", type=float, default=float(os.getenv("VOICE_RATE", "0.8")), help="Voiceover speech rate multiplier (default: 0.8)")
+    parser.add_argument("--bgm-volume", type=float, default=float(os.getenv("BGM_VOLUME", "0.08")), help="Background music volume multiplier (default: 0.08)")
     parser.add_argument("--dry-run", action="store_true", help="Generate topic and script only without rendering")
     parser.add_argument("--no-upload", action="store_true", help="Render video without uploading to YouTube")
 
@@ -320,6 +325,8 @@ def main():
             custom_topic=topic_val,
             pillar_id=args.pillar,
             voice_name=args.voice,
+            voice_rate=args.voice_rate,
+            bgm_volume=args.bgm_volume,
             privacy_status=privacy_val,
             video_source=args.source,
             dry_run=args.dry_run,

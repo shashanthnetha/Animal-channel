@@ -300,7 +300,7 @@ Follow the 5-phase structure:
 4. TWIST/PAYOFF (25-35s): The craziest, most unbelievable fact.
 5. ENDING (35-40s): A punchy final statement that lingers in the mind.
 
-Keep word count between 65 and 95 words for ideal speech cadence at 1.1x speed.
+Keep word count between 60 and 80 words for ideal speech cadence at a relaxed 0.8x pace (targeting 30-38s video length).
 CRITICAL: Output ONLY the spoken narration text. Never refuse, ask questions, or provide disclaimers. Focus on real, fascinating biological facts about this creature.
 """.strip()
 

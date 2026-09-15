@@ -243,6 +243,8 @@ def generate_curiosity_topic(
 You are the Creative Director for a top-tier Animal & Nature YouTube Shorts channel.
 Your goal is to propose ONE killer, curiosity-driven topic that will blow viewers' minds.
 
+CRITICAL REQUIREMENT: Must be 100% scientifically authentic and verifiable. Strictly NO myths, folklore, or fabricated claims. Focus on real documented biology, extreme adaptations, or genuine animal behaviors.
+
 Category: {selected_pillar['name']} ({selected_pillar['description']})
 Inspirational examples from this category:
 {chr(10).join(f"- {e}" for e in selected_pillar['examples'])}
@@ -251,7 +253,7 @@ Inspirational examples from this category:
 
 Return a valid JSON object with the following fields:
 {{
-  "subject": "A concise subject phrase (e.g. Wood Frog Freeze Survival)",
+  "subject": "A concise subject phrase of real biological adaptation (e.g. Wood Frog Freeze Survival)",
   "hook_angle": "The core mystery or surprising angle (e.g. How a frog turns into an ice cube with zero heartbeat and comes back to life in spring)",
   "target_animal": "Specific animal or organism name (e.g. Alaskan Wood Frog)",
   "short_title": "Curiosity-driven YouTube Shorts title with 1 emoji, under 50 characters (e.g. This Frog Can Freeze Solid 🐸)"
@@ -299,7 +301,7 @@ Follow the 5-phase structure:
 5. ENDING (35-40s): A punchy final statement that lingers in the mind.
 
 Keep word count between 65 and 95 words for ideal speech cadence at 1.1x speed.
-Output ONLY the spoken narration text.
+CRITICAL: Output ONLY the spoken narration text. Never refuse, ask questions, or provide disclaimers. Focus on real, fascinating biological facts about this creature.
 """.strip()
 
     script = llm.generate_script(

@@ -173,27 +173,63 @@ Turn astonishing animal and natural phenomena into viral, high-retention 25–40
 """.strip()
 
 
-def get_random_pillar() -> dict:
-    """Return a randomly chosen content pillar."""
+def _robust_parse_json(text: str) -> Any:
+    """Safely parse JSON from LLM responses even if wrapped in markdown, commentary, or thoughts."""
+    cleaned = (text or "").strip()
+    # 1. Direct load
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+
+    # 2. Strip code fences
+    fence_cleaned = llm._strip_code_fence(cleaned).strip()
+    try:
+        return json.loads(fence_cleaned)
+    except Exception:
+        pass
+
+    # 3. Regex find innermost/outermost json object or list
+    match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", cleaned)
+    if match:
+        try:
+            return json.loads(match.group(0).strip())
+        except Exception:
+            pass
+
+    # 4. Check for code block with json
+    fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned, re.IGNORECASE)
+    if fence_match:
+        try:
+            return json.loads(fence_match.group(1).strip())
+        except Exception:
+            pass
+
+    raise ValueError(f"Could not extract valid JSON from response: {cleaned[:80]}...")
+
+
+def get_random_pillar() -> dict[str, Any]:
     return random.choice(CONTENT_PILLARS)
 
 
+def get_pillar_by_id(pillar_id: str) -> Optional[dict[str, Any]]:
+    for p in CONTENT_PILLARS:
+        if p["id"] == pillar_id:
+            return p
+    return None
+
+
 def generate_curiosity_topic(
-    history_titles: Optional[List[str]] = None,
     pillar_id: Optional[str] = None,
-) -> dict:
+    history_titles: Optional[list[str]] = None,
+) -> dict[str, Any]:
     """
-    Generate a brand new, highly engaging animal/nature topic using LLM,
-    ensuring it does not duplicate past video topics.
+    Generate a high-curiosity, scientifically accurate animal/nature topic.
+    Avoids recently covered topics to ensure variety.
     """
-    selected_pillar = None
-    if pillar_id:
-        for p in CONTENT_PILLARS:
-            if p["id"] == pillar_id:
-                selected_pillar = p
-                break
+    selected_pillar = get_pillar_by_id(pillar_id) if pillar_id else get_random_pillar()
     if not selected_pillar:
-        selected_pillar = random.choice(CONTENT_PILLARS)
+        selected_pillar = get_random_pillar()
 
     history_context = ""
     if history_titles:
@@ -225,8 +261,7 @@ Output pure JSON with no markdown wrapping or extra commentary.
 
     try:
         response = llm._generate_response(prompt)
-        cleaned = llm._strip_code_fence(response).strip()
-        data = json.loads(cleaned)
+        data = _robust_parse_json(response)
         logger.info(f"Generated Animal Topic: {data.get('short_title')} ({data.get('subject')})")
         return data
     except Exception as exc:
@@ -306,8 +341,7 @@ Pure JSON only.
 
     try:
         response = llm._generate_response(prompt)
-        cleaned = llm._strip_code_fence(response).strip()
-        terms = json.loads(cleaned)
+        terms = _robust_parse_json(response)
         if isinstance(terms, list) and terms:
             logger.info(f"Extracted animal visual terms: {terms}")
             return [str(t).strip() for t in terms[:amount]]
@@ -364,8 +398,7 @@ Output pure JSON with keys: "title", "description", "tags" (array of strings), "
 
     try:
         response = llm._generate_response(prompt)
-        cleaned = llm._strip_code_fence(response).strip()
-        data = json.loads(cleaned)
+        data = _robust_parse_json(response)
         title = data.get("title", "").strip()
         if not title:
             title = (short_title or f"{video_subject} 🌿") + " #Shorts"

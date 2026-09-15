@@ -292,13 +292,15 @@ def main():
     parser.add_argument("--no-upload", action="store_true", help="Render video without uploading to YouTube")
 
     args = parser.parse_args()
+    privacy_val = (args.privacy or "public").strip("'\"").strip()
+    topic_val = args.topic.strip("'\"").strip() if args.topic else None
 
     try:
         record = run_animal_shorts_pipeline(
-            custom_topic=args.topic,
+            custom_topic=topic_val,
             pillar_id=args.pillar,
             voice_name=args.voice,
-            privacy_status=args.privacy,
+            privacy_status=privacy_val,
             video_source=args.source,
             dry_run=args.dry_run,
             no_upload=args.no_upload,

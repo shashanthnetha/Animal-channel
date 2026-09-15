@@ -83,19 +83,24 @@ jobs:
 
       - name: Run Autonomous Animal Shorts Pipeline
         run: |
-          TOPIC_ARG=""
-          if [ -n "${{ github.event.inputs.custom_topic }}" ]; then
-            TOPIC_ARG="--topic '${{ github.event.inputs.custom_topic }}'"
+          CMD=("uv" "run" "--no-sync" "python" "scripts/auto_animal_shorts.py")
+
+          CUSTOM_TOPIC="${{ github.event.inputs.custom_topic }}"
+          if [ -n "$CUSTOM_TOPIC" ]; then
+            CMD+=("--topic" "$CUSTOM_TOPIC")
           fi
 
-          PRIVACY_ARG="--privacy '${{ github.event.inputs.privacy_status || 'public' }}'"
+          PRIVACY_SETTING="${{ github.event.inputs.privacy_status }}"
+          if [ -z "$PRIVACY_SETTING" ]; then
+            PRIVACY_SETTING="public"
+          fi
+          CMD+=("--privacy" "$PRIVACY_SETTING")
 
-          DRY_RUN_ARG=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            DRY_RUN_ARG="--dry-run"
+            CMD+=("--dry-run")
           fi
 
-          uv run --no-sync python scripts/auto_animal_shorts.py $TOPIC_ARG $PRIVACY_ARG $DRY_RUN_ARG
+          "${CMD[@]}"
 
       - name: Commit & Push Upload History
         if: github.event.inputs.dry_run != 'true'

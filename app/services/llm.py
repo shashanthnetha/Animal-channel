@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from time import perf_counter
 from typing import List
 
@@ -620,9 +621,29 @@ def _generate_response(prompt: str, app_config=None) -> str:
             base_url=base_url,
         )
 
-        response = client.chat.completions.create(
-            model=model_name, messages=[{"role": "user", "content": prompt}]
-        )
+        create_params = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if llm_provider == "groq":
+            create_params["max_tokens"] = 600
+
+        response = None
+        for attempt in range(3):
+            try:
+                response = client.chat.completions.create(**create_params)
+                break
+            except Exception as req_err:
+                err_str = str(req_err).lower()
+                if ("429" in err_str or "rate_limit" in err_str) and attempt < 2:
+                    wait_time = (attempt + 1) * 4
+                    logger.warning(
+                        f"[{llm_provider}] Rate limit encountered, retrying in {wait_time}s (attempt {attempt + 1}/3)..."
+                    )
+                    time.sleep(wait_time)
+                else:
+                    raise req_err
+
         if response:
             if isinstance(response, ChatCompletion):
                 return _extract_chat_completion_text(response, llm_provider)

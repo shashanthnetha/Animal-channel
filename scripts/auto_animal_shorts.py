@@ -19,6 +19,7 @@ import datetime
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -177,6 +178,7 @@ def run_animal_shorts_pipeline(
 
     # Step 2: Script Generation (25-40s 5-phase story)
     logger.info("Writing high-retention 5-phase script...")
+    time.sleep(2)
     script = animal_channel.generate_animal_script(
         topic_subject=subject,
         hook_angle=hook_angle,
@@ -186,6 +188,7 @@ def run_animal_shorts_pipeline(
 
     # Step 3: Wildlife Visual Keywords Extraction
     logger.info("Extracting visual search keywords for stock footage...")
+    time.sleep(2)
     terms = animal_channel.extract_animal_visual_terms(
         script=script,
         target_animal=target_animal,
@@ -195,6 +198,7 @@ def run_animal_shorts_pipeline(
 
     # Step 4: SEO Metadata (Title, Description, Hashtags)
     logger.info("Generating viral YouTube Shorts metadata...")
+    time.sleep(2)
     metadata = animal_channel.generate_youtube_shorts_metadata(
         video_subject=subject,
         script=script,

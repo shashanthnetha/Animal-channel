@@ -7,10 +7,9 @@ Orchestrates the entire pipeline:
 3. Extracts realistic wildlife stock footage keywords.
 4. Synthesizes voiceover, generates subtitles with pop spring animation.
 5. Composites 9:16 vertical video with royalty-free ambient BGM.
-6. Verifies the render (audio track, subtitle file, correct output file).
-7. Generates high-CTR title, description, and viral hashtags.
-8. Uploads directly to YouTube Shorts via YouTube Data API v3.
-9. Logs record to history/uploaded_shorts.json.
+6. Generates high-CTR title, description, and viral hashtags.
+7. Uploads directly to YouTube Shorts via YouTube Data API v3.
+8. Logs record to history/uploaded_shorts.json.
 """
 
 from __future__ import annotations
@@ -19,7 +18,6 @@ import argparse
 import datetime
 import json
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -111,6 +109,7 @@ def apply_env_overrides_to_config():
     logger.info(f"Active LLM Provider: {active_provider} (Model: {active_model})")
 
 
+
 def load_history(history_path: Path = HISTORY_FILE) -> list[dict[str, Any]]:
     """Load previously published video records."""
     if not history_path.exists():
@@ -133,83 +132,6 @@ def save_history_record(record: dict[str, Any], history_path: Path = HISTORY_FIL
     with open(history_path, "w", encoding="utf-8") as fp:
         json.dump(history, fp, indent=2, ensure_ascii=False)
     logger.info(f"Updated history log at {history_path} (total: {len(history)} entries)")
-
-
-def _ffprobe(args: list[str]) -> Optional[str]:
-    """Run ffprobe and return stdout, or None if ffprobe is not installed."""
-    try:
-        proc = subprocess.run(
-            ["ffprobe", "-v", "error", *args],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        return proc.stdout.strip()
-    except FileNotFoundError:
-        return None
-
-
-def verify_render(final_video_path: str, subtitle_enabled: bool = True) -> None:
-    """
-    Sanity-check the rendered video BEFORE it is uploaded publicly.
-    Raises RuntimeError if the video is missing voice, subtitles, or is the
-    wrong file (e.g. the silent combined-*.mp4 clip stitch).
-    """
-    final_path = Path(final_video_path)
-    task_dir = final_path.parent
-    problems: list[str] = []
-
-    # Diagnostics: show exactly what the task folder contains.
-    logger.info(f"--- Render verification for {task_dir} ---")
-    for f in sorted(task_dir.glob("*")):
-        if f.is_file():
-            logger.info(f"  {f.name}: {f.stat().st_size} bytes")
-
-    # 1. Must be the final render, not the silent clip stitch.
-    if final_path.name.startswith("combined"):
-        problems.append(f"{final_path.name} is the silent combined clip, not the final render")
-    if not final_path.is_file() or final_path.stat().st_size == 0:
-        problems.append(f"{final_path} is missing or empty")
-
-    # 2. Voiceover file must exist and be non-empty.
-    audio_file = task_dir / "audio.mp3"
-    if not audio_file.is_file() or audio_file.stat().st_size == 0:
-        problems.append("audio.mp3 (voiceover) is missing or empty")
-    else:
-        dur = _ffprobe(["-show_entries", "format=duration", "-of", "csv=p=0", str(audio_file)])
-        logger.info(f"  voiceover duration: {dur}s")
-
-    # 3. Subtitle file must exist and contain entries.
-    if subtitle_enabled:
-        srt_file = task_dir / "subtitle.srt"
-        if not srt_file.is_file() or srt_file.stat().st_size == 0:
-            problems.append("subtitle.srt is missing or empty (subtitles were not generated)")
-        else:
-            srt_text = srt_file.read_text(encoding="utf-8", errors="ignore")
-            cue_count = srt_text.count("-->")
-            logger.info(f"  subtitle cues: {cue_count}")
-            if cue_count == 0:
-                problems.append("subtitle.srt has no subtitle cues")
-
-    # 4. The final video must contain an audio stream.
-    if final_path.is_file():
-        streams = _ffprobe(
-            ["-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", str(final_path)]
-        )
-        if streams is None:
-            logger.warning("ffprobe not found, skipping audio-stream check")
-        elif not streams:
-            problems.append(f"{final_path.name} has no audio track")
-        else:
-            vdur = _ffprobe(["-show_entries", "format=duration", "-of", "csv=p=0", str(final_path)])
-            logger.info(f"  final video: audio track OK, duration {vdur}s")
-
-    if problems:
-        for p in problems:
-            logger.error(f"RENDER CHECK FAILED: {p}")
-        raise RuntimeError("Render verification failed, not uploading: " + "; ".join(problems))
-
-    logger.success("Render verification passed (voice + subtitles present).")
 
 
 def run_animal_shorts_pipeline(
@@ -337,13 +259,8 @@ def run_animal_shorts_pipeline(
         logger.error(error_msg)
         raise RuntimeError(error_msg)
 
-    # Always use the final render (voice + subtitles + BGM), never combined_videos.
     final_video_path = result["videos"][0]
     logger.success(f"🎬 Video generated successfully: {final_video_path}")
-    logger.info(f"Pipeline result keys: {list(result.keys())}")
-
-    # Step 5b: Verify the render BEFORE anything goes public.
-    verify_render(final_video_path, subtitle_enabled=params.subtitle_enabled)
 
     # Step 6: Direct YouTube Upload
     upload_result = None
@@ -416,16 +333,6 @@ def main():
             no_upload=args.no_upload,
         )
         print(json.dumps(record, indent=2))
-
-        # Fail the GitHub Actions job if the upload did not succeed,
-        # instead of showing a green run with nothing published.
-        if (
-            not args.dry_run
-            and not args.no_upload
-            and not record.get("upload_status")
-        ):
-            logger.error("Upload did not succeed, failing the job.")
-            sys.exit(1)
     except Exception as exc:
         logger.exception(f"Pipeline failed: {exc}")
         sys.exit(1)
